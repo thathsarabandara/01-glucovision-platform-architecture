@@ -27,6 +27,12 @@ If you *must* stick with the M32, you have to alter your collection protocol to 
 1.  **Fiducial Markers (Mandatory)**: Every single photo MUST include a standard reference object next to the plate (e.g., a standard Sri Lankan 10 Rupee coin, or a credit card). The AI will use this known size to calculate pixels-to-centimeters.
 2.  **Multi-Angle Shots**: Require the user to take *two* photos per meal: one top-down (90 degrees) and one at a 45-degree angle. This allows you to estimate height.
 
+#### Method D: The AR + CNN Hybrid Approach (Highly Feasible & Scalable)
+*   **Concept**: Use Augmented Reality (e.g., ARCore on Android, including your M32) to map the 3D space and establish scale, while simultaneously using a CNN (like Mask R-CNN or YOLOv8-Seg) on the 2D image feed to recognize and segment the food.
+*   **How it Works**: The AR engine builds a physical mesh/plane of the table and plate. The CNN draws a 2D boundary (mask) around the food item (e.g., "Dhal Curry"). This 2D mask is then mathematically projected onto the AR 3D mesh, instantly calculating the exact real-world volume and height of that specific area without needing a physical fiducial marker or a dedicated LiDAR sensor.
+*   **Feasibility**: **Extremely High and highly recommended.** This is often a much better and more scalable approach than relying on raw monocular depth estimation or forcing users to carry fiducial markers. It works on standard smartphones because ARCore uses the camera feed combined with the phone's internal gyroscope and accelerometer to build the 3D map via slight movement (parallax).
+*   **Limitation/Requirement**: To implement this, you will likely need to transition your `02-glucovision-data-collect-app` from a pure web app (React/Vite) to a native or hybrid mobile app (e.g., React Native with AR integration or Flutter). Standard mobile web browsers (WebXR) currently lack the robust plane-tracking and API access required for high-fidelity AR volume calculation.
+
 ## 2. Tools for Analysis and Processing
 
 To process this data for your AI models, you must use the following stack:
@@ -61,7 +67,14 @@ Deep learning models are data-hungry. Because Sri Lankan food is highly complex 
 
 ## 5. The Ultimate Protocol for Success
 
-To achieve your thesis objectives for accurate recognition and portion estimation:
-1.  **Update the App**: Add an on-screen overlay to the `glucovision-data-collect-app` guiding users to place a standard marker (like a coin) and hold the phone at a 45-degree angle.
-2.  **Capture Strategy**: Start a controlled lab collection phase. Cook 30 standard meals. Take photos of them using the Samsung M32 under 5 different lighting conditions, at 3 different angles.
-3.  **Ground Truth**: Before taking the photo, WEIGH the food on a digital kitchen scale (in grams). Record this weight in the app database alongside the image. The AI will learn the mapping of `(2D Image Area + Estimated Depth) -> Grams`.
+To achieve your thesis objectives for accurate recognition and portion estimation, you should adopt the **AR + CNN Hybrid Approach** as your primary strategy:
+
+1.  **Migrate the App (Crucial Step)**: Transition `02-glucovision-data-collect-app` from a React/Vite web application to a native mobile framework (like React Native with AR libraries or Flutter). This unlocks the device's native AR capabilities (ARCore) and gyroscope sensors.
+2.  **The New Capture Workflow**:
+    *   The user opens the app and slowly moves the camera across the table to allow ARCore to detect the 3D plane and establish real-world scale.
+    *   The user takes the photo of their meal.
+    *   The app sends both the 2D high-resolution image and the AR spatial mesh data to your backend.
+3.  **Backend Processing Synergy**: 
+    *   Run the 2D image through your CNN (YOLOv8/Mask R-CNN) to perfectly segment the boundaries of the food items (e.g., "Dhal Curry").
+    *   Project that 2D segmentation mask onto the AR spatial mesh to accurately calculate the physical volume (cm³) without needing any fiducial markers or coins.
+4.  **Controlled Baseline Collection (Ground Truth)**: Before releasing the app to the public, conduct a controlled lab collection. Cook 30 standard meals and weigh every component on a digital scale (in grams) before taking the AR-assisted photo. This establishes the critical AI mapping model: `AR Volume (cm³) -> Mass (grams)` for each specific food type.
